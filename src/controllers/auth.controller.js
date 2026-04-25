@@ -41,7 +41,7 @@ export const signupController = async (req, res) => {
 
     res.cookie("token", token)
 
-    res.status(201).json({messasge: "User created successfully", 
+    res.status(201).json({message: "User created successfully", 
         token,
         user: {
             id: newUser._id,
@@ -49,4 +49,45 @@ export const signupController = async (req, res) => {
             email: newUser.email
         }
     })
+}
+
+/** 
+* @name loginConroller
+* @description login user, expects email and password in the request body
+* @access public
+*/
+
+async function loginController(req,res) {
+     const{username , password}  = req.body;
+
+     try {
+        const user = await User.findOne({ $or: [{ email}, { username }] });
+        if(!user) {
+            return res.status(400).json({message: "Invalid credentials"})
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if(!isMatch) {
+            return res.status(400).json({message: "Invalid credentials"})
+        }
+
+        const token = jwt.sign(
+            {id: user._id, username: user.username},
+            process.env.JWT_SECRET,
+            {expiresIn: "1d"}
+        );
+
+        res.cookie("token", token);
+        res.status(200).json({message: "Login successful",
+             token,
+              user: {
+              id: user._id,
+              username: user.username, 
+              email: user.email
+                }
+            });
+    } catch (error) {
+        res.status(500).json({message: "Error occurred while logging in"});
+    }
+
 }
